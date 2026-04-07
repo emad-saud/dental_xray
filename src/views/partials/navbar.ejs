@@ -1,0 +1,20 @@
+<% if (currentUser) { %>
+  <header class="topbar">
+    <div class="container nav-wrap">
+      <a href="/dashboard" class="brand">Dental X-Ray System</a>
+      <nav class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/patients">Patients</a>
+        <% if (currentUser.role === 'admin') { %>
+          <a href="/admin/users">Accounts</a>
+        <% } %>
+      </nav>
+      <div class="nav-user">
+        <span><strong><%= currentUser.fullName %></strong> · <%= currentUser.role.replace('_', ' ') %></span>
+        <form method="POST" action="/logout">
+          <button type="submit" class="btn btn-outline">Logout</button>
+        </form>
+      </div>
+    </div>
+  </header>
+<% } %>

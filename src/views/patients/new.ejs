@@ -1,0 +1,47 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<main class="container page-space narrow">
+  <section class="card">
+    <div class="section-title">
+      <div>
+        <p class="eyebrow">X-ray Employee</p>
+        <h1>Create Patient</h1>
+      </div>
+    </div>
+
+    <%- include('../partials/flash') %>
+
+    <form method="POST" action="/patients" class="form-grid two-grid">
+      <div>
+        <label>Patient ID</label>
+        <input type="text" name="patientId" placeholder="External system ID" required />
+      </div>
+      <div>
+        <label>Full name</label>
+        <input type="text" name="fullName" required />
+      </div>
+      <div>
+        <label>Gender</label>
+        <select name="gender">
+          <option value="">Select</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+      </div>
+      <div>
+        <label>Date of birth</label>
+        <input type="date" name="dob" />
+      </div>
+      <div>
+        <label>Phone</label>
+        <input type="text" name="phone" />
+      </div>
+      <div class="full-span">
+        <label>Notes</label>
+        <textarea name="notes" rows="4" placeholder="Optional notes..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Save Patient</button>
+    </form>
+  </section>
+</main>
+<%- include('../partials/footer') %>

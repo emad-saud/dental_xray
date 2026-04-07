@@ -1,0 +1,28 @@
+<%- include('../partials/head') %>
+<section class="login-screen">
+  <div class="login-card card">
+    <div class="login-brand">Dental X-Ray System</div>
+    <h1>Welcome back</h1>
+    <p class="muted">Login with your account to manage patients and X-ray images.</p>
+
+    <%- include('../partials/flash') %>
+
+    <form method="POST" action="/login" class="form-grid">
+      <div>
+        <label>Username</label>
+        <input type="text" name="username" placeholder="Enter username" required />
+      </div>
+      <div>
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Enter password" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Login</button>
+    </form>
+
+    <div class="helper-box">
+      <strong>Default admin</strong>
+      <p>Username: <code>admin</code> · Password: <code>admin123</code></p>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

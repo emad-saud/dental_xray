@@ -1,0 +1,99 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<main class="container page-space">
+  <%- include('../partials/flash') %>
+
+  <section class="patient-header card">
+    <div>
+      <p class="eyebrow">Patient profile</p>
+      <h1><%= patient.full_name %></h1>
+      <p class="muted"><strong>Patient ID:</strong> <%= patient.patient_id %></p>
+      <p class="muted">
+        <strong>Gender:</strong> <%= patient.gender || '-' %> ·
+        <strong>DOB:</strong> <%= patient.dob ? new Date(patient.dob).toLocaleDateString() : '-' %> ·
+        <strong>Phone:</strong> <%= patient.phone || '-' %>
+      </p>
+      <p class="muted"><strong>Notes:</strong> <%= patient.notes || 'No notes added.' %></p>
+      <p class="muted small">Created by <%= patient.creator_name %></p>
+    </div>
+    <div class="hero-actions">
+      <a href="/patients" class="btn btn-outline">Back to Patients</a>
+    </div>
+  </section>
+
+  <% if (currentUser.role === 'admin' || currentUser.role === 'xray_employee') { %>
+    <section class="card upload-card">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Upload</p>
+          <h2>Add X-ray File</h2>
+        </div>
+      </div>
+      <p class="muted upload-help">
+        Best for browser viewing: export from CS Imaging as <strong>JPG</strong> or a single <strong>DICOM (.dcm)</strong> file.
+        You can also store a <strong>DICOMDIR</strong> or ZIP archive, but those are saved mainly for download instead of in-browser viewing.
+      </p>
+      <form method="POST" action="/patients/<%= patient.id %>/images" enctype="multipart/form-data" class="form-grid two-grid">
+        <div class="full-span">
+          <label>Choose file</label>
+          <input type="file" name="image" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.tif,.tiff,.dcm,.dicom,.zip,application/dicom,image/*" required />
+        </div>
+        <div class="full-span">
+          <label>Description</label>
+          <input type="text" name="description" placeholder="Example: Bitewing - right side" />
+        </div>
+        <button type="submit" class="btn btn-primary">Upload File</button>
+      </form>
+    </section>
+  <% } %>
+
+  <section>
+    <div class="section-title">
+      <div>
+        <p class="eyebrow">Files</p>
+        <h2>X-ray Gallery</h2>
+      </div>
+    </div>
+
+    <% if (images.length === 0) { %>
+      <div class="card empty-state">No files uploaded yet.</div>
+    <% } %>
+
+    <div class="image-grid">
+      <% images.forEach((image) => { %>
+        <article class="image-card card">
+          <% if (image.viewer_kind === 'image') { %>
+            <img src="<%= image.image_path %>" alt="<%= image.original_name %>" />
+          <% } else if (image.viewer_kind === 'dicom') { %>
+            <div class="dicom-placeholder">
+              <span class="dicom-badge">DICOM</span>
+              <strong>Browser viewer ready</strong>
+              <p>Open this file to display it directly on the website.</p>
+            </div>
+          <% } else { %>
+            <div class="file-placeholder">
+              <span class="dicom-badge secondary"><%= image.viewer_kind === 'package' ? 'ARCHIVE' : 'FILE' %></span>
+              <strong><%= image.viewer_kind === 'package' ? 'Stored package' : 'Stored attachment' %></strong>
+              <p>Kept for download. Export JPG or single DICOM for direct browser viewing.</p>
+            </div>
+          <% } %>
+          <div class="image-meta">
+            <div class="image-meta-top">
+              <h3><%= image.original_name %></h3>
+              <span class="badge"><%= viewerKindLabel(image.viewer_kind) %></span>
+            </div>
+            <p><%= image.description || 'No description.' %></p>
+            <small>Uploaded by <%= image.uploader_name %> · <%= new Date(image.uploaded_at).toLocaleDateString() %></small>
+            <div class="image-actions">
+              <% if (isInlineViewable(image.viewer_kind)) { %>
+                <a href="/patients/<%= patient.id %>/images/<%= image.id %>" class="btn btn-primary btn-small">Open Viewer</a>
+              <% } %>
+              <a href="<%= image.image_path %>" class="btn btn-outline btn-small" target="_blank" rel="noreferrer">Download / Open File</a>
+            </div>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+</main>
+<%- include('../partials/footer') %>

@@ -1,0 +1,119 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<main class="container page-space">
+  <%- include('../partials/flash') %>
+
+  <section class="card viewer-header-card">
+    <div class="section-title">
+      <div>
+        <p class="eyebrow">Viewer</p>
+        <h1><%= image.original_name %></h1>
+        <p class="muted">
+          <strong>Patient:</strong> <%= patient.full_name %> ·
+          <strong>Patient ID:</strong> <%= patient.patient_id %>
+        </p>
+        <p class="muted small">
+          <strong>Type:</strong> <%= viewerKindLabel(image.viewer_kind) %>
+          <% if (image.mime_type) { %>
+            · <strong>MIME:</strong> <%= image.mime_type %>
+          <% } %>
+        </p>
+      </div>
+      <div class="hero-actions">
+        <a href="/patients/<%= patient.id %>" class="btn btn-outline">Back to Patient</a>
+        <a href="<%= image.image_path %>" class="btn btn-primary" target="_blank" rel="noreferrer">Open Raw File</a>
+      </div>
+    </div>
+  </section>
+
+  <% if (image.viewer_kind === 'image') { %>
+    <section class="card">
+      <div class="viewer-image-wrap">
+        <img src="<%= image.image_path %>" alt="<%= image.original_name %>" class="viewer-image" />
+      </div>
+    </section>
+  <% } else if (image.viewer_kind === 'dicom') { %>
+    <section class="card viewer-card">
+      <div class="viewer-toolbar">
+        <div>
+          <strong>DICOM Web Viewer</strong>
+          <p class="muted small">Pan with drag. Use your mouse wheel to zoom if your browser supports it.</p>
+        </div>
+        <button type="button" class="btn btn-outline btn-small" id="reset-view">Reset View</button>
+      </div>
+      <div id="dicom-status" class="flash success viewer-status">Loading DICOM image...</div>
+      <div id="dicom-viewer" class="dicom-viewer" data-image-url="<%= image.image_path %>"></div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/cornerstone-core@2.6.1/dist/cornerstone.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dicom-parser@1.8.21/dist/dicomParser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cornerstone-math@0.1.10/dist/cornerstoneMath.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cornerstone-tools@4.22.1/dist/cornerstoneTools.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cornerstone-wado-image-loader@4.13.2/dist/cornerstoneWADOImageLoader.min.js"></script>
+    <script>
+      (function () {
+        const element = document.getElementById('dicom-viewer');
+        const status = document.getElementById('dicom-status');
+        const resetButton = document.getElementById('reset-view');
+        const fileUrl = element.getAttribute('data-image-url');
+
+        cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
+        cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
+        cornerstoneTools.external.cornerstone = cornerstone;
+        cornerstoneTools.external.Hammer = Hammer;
+        cornerstoneTools.external.cornerstoneMath = cornerstoneMath;
+        cornerstoneTools.init();
+
+        cornerstoneWADOImageLoader.webWorkerManager.initialize({
+          webWorkerPath:
+            'https://cdn.jsdelivr.net/npm/cornerstone-wado-image-loader@4.13.2/dist/cornerstoneWADOImageLoaderWebWorker.min.js',
+          taskConfiguration: {
+            decodeTask: {
+              codecsPath:
+                'https://cdn.jsdelivr.net/npm/cornerstone-wado-image-loader@4.13.2/dist/cornerstoneWADOImageLoaderCodecs.min.js'
+            }
+          }
+        });
+
+        cornerstone.enable(element);
+        const imageId = 'wadouri:' + window.location.origin + fileUrl;
+
+        function setStatus(message, isError) {
+          status.textContent = message;
+          status.className = 'flash ' + (isError ? 'error' : 'success') + ' viewer-status';
+        }
+
+        cornerstone
+          .loadAndCacheImage(imageId)
+          .then(function (image) {
+            cornerstone.displayImage(element, image);
+            cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
+            cornerstoneTools.addTool(cornerstoneTools.PanTool);
+            cornerstoneTools.addTool(cornerstoneTools.ZoomWheelTool);
+            cornerstoneTools.setToolActive('Wwwc', { mouseButtonMask: 1 });
+            cornerstoneTools.setToolActive('Pan', { mouseButtonMask: 4 });
+            cornerstoneTools.setToolActive('ZoomWheel', {});
+            setStatus('DICOM image loaded successfully.', false);
+          })
+          .catch(function (error) {
+            console.error(error);
+            setStatus('Could not render this DICOM in the browser. Try opening the raw file, or export the image as JPG from CS Imaging.', true);
+          });
+
+        resetButton.addEventListener('click', function () {
+          cornerstone.reset(element);
+        });
+      })();
+    </script>
+  <% } else { %>
+    <section class="card empty-state">
+      <h2>This file is stored, but not rendered inline.</h2>
+      <p class="muted">
+        DICOMDIR folders and archives usually need the referenced files together. For direct web viewing, export a single DICOM (.dcm) or JPG from CS Imaging.
+      </p>
+      <a href="<%= image.image_path %>" class="btn btn-primary" target="_blank" rel="noreferrer">Download File</a>
+    </section>
+  <% } %>
+</main>
+<%- include('../partials/footer') %>

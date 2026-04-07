@@ -1,0 +1,80 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<main class="container page-space">
+  <div class="section-title">
+    <div>
+      <p class="eyebrow">Patients</p>
+      <h1>Patient Records</h1>
+    </div>
+    <% if (currentUser.role === 'admin' || currentUser.role === 'xray_employee') { %>
+      <a href="/patients/new" class="btn btn-primary">Add Patient</a>
+    <% } %>
+  </div>
+
+  <%- include('../partials/flash') %>
+
+  <section class="card search-card">
+    <form method="GET" action="/patients" class="search-form">
+      <div class="search-input-wrap">
+        <label for="patient-search">Find a patient</label>
+        <input
+          id="patient-search"
+          type="text"
+          name="q"
+          value="<%= searchTerm || '' %>"
+          placeholder="Search by Patient ID, name, or phone"
+        />
+      </div>
+      <div class="search-actions">
+        <button type="submit" class="btn btn-primary">Search</button>
+        <% if (searchTerm) { %>
+          <a href="/patients" class="btn btn-outline">Clear</a>
+        <% } %>
+      </div>
+    </form>
+    <p class="muted small search-hint">
+      <% if (searchTerm) { %>
+        Showing <strong><%= patients.length %></strong> result(s) for <strong>"<%= searchTerm %>"</strong>.
+      <% } else { %>
+        Type a Patient ID like <strong>7000</strong> or part of a patient name to jump straight to the right record.
+      <% } %>
+    </p>
+  </section>
+
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Patient ID</th>
+          <th>Name</th>
+          <th>Gender</th>
+          <th>Date of Birth</th>
+          <th>Phone</th>
+          <th>Created By</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (patients.length === 0) { %>
+          <tr>
+            <td colspan="7" class="empty-state">
+              <%= searchTerm ? 'No patients match your search.' : 'No patients yet.' %>
+            </td>
+          </tr>
+        <% } %>
+        <% patients.forEach((patient) => { %>
+          <tr>
+            <td><strong><%= patient.patient_id %></strong></td>
+            <td><%= patient.full_name %></td>
+            <td><%= patient.gender || '-' %></td>
+            <td><%= patient.dob ? new Date(patient.dob).toLocaleDateString() : '-' %></td>
+            <td><%= patient.phone || '-' %></td>
+            <td><%= patient.creator_name %></td>
+            <td><a href="/patients/<%= patient.id %>" class="btn btn-outline btn-small">Open</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</main>
+<%- include('../partials/footer') %>

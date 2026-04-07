@@ -1,0 +1,46 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<main class="container page-space">
+  <%- include('partials/flash') %>
+
+  <section class="hero card">
+    <div>
+      <p class="eyebrow">Easy workflow</p>
+      <h1>Hello, <%= currentUser.fullName %></h1>
+      <p class="muted">
+        <% if (currentUser.role === 'admin') { %>
+          Create user accounts and monitor overall activity.
+        <% } else if (currentUser.role === 'xray_employee') { %>
+          Create patients and upload their X-ray images quickly.
+        <% } else { %>
+          Review patient details and X-ray images in one place.
+        <% } %>
+      </p>
+    </div>
+    <div class="hero-actions">
+      <a href="/patients" class="btn btn-primary">Open Patients</a>
+      <% if (currentUser.role === 'admin') { %>
+        <a href="/admin/users" class="btn btn-outline">Manage Accounts</a>
+      <% } %>
+      <% if (currentUser.role === 'xray_employee' || currentUser.role === 'admin') { %>
+        <a href="/patients/new" class="btn btn-outline">Add Patient</a>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="stats-grid">
+    <div class="stat-card card">
+      <span>Total accounts</span>
+      <strong><%= stats.userCount %></strong>
+    </div>
+    <div class="stat-card card">
+      <span>Total patients</span>
+      <strong><%= stats.patientCount %></strong>
+    </div>
+    <div class="stat-card card">
+      <span>Total X-ray images</span>
+      <strong><%= stats.imageCount %></strong>
+    </div>
+  </section>
+</main>
+<%- include('partials/footer') %>
