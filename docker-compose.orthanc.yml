@@ -1,0 +1,24 @@
+services:
+  orthanc:
+    image: orthancteam/orthanc
+    container_name: dental-xray-orthanc
+    restart: unless-stopped
+    ports:
+      - "8042:8042"
+      - "4242:4242"
+    environment:
+      ORTHANC__NAME: "Dental Xray Orthanc"
+      ORTHANC__DICOM_AET: "DENTALXRAY"
+      ORTHANC__DICOM_ALWAYS_ALLOW_STORE: "true"
+      ORTHANC__AUTHENTICATION_ENABLED: "false"
+      DICOM_WEB_PLUGIN_ENABLED: "true"
+      OHIF_PLUGIN_ENABLED: "true"
+      GDCM_PLUGIN_ENABLED: "true"
+      ORTHANC__OHIF__DATA_SOURCE: "dicom-web"
+      ORTHANC__OHIF__ROUTER_BASENAME: "/ohif/"
+      VERBOSE_ENABLED: "false"
+    volumes:
+      - orthanc-storage:/var/lib/orthanc/db
+
+volumes:
+  orthanc-storage:

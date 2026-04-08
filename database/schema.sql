@@ -28,7 +28,11 @@ CREATE TABLE IF NOT EXISTS xray_images (
   uploaded_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   viewer_kind VARCHAR(20) NOT NULL DEFAULT 'image',
-  mime_type VARCHAR(120)
+  mime_type VARCHAR(120),
+  orthanc_instance_id VARCHAR(80),
+  orthanc_study_id VARCHAR(80),
+  orthanc_study_uid VARCHAR(255),
+  orthanc_sync_error TEXT
 );
 
 -- If you already created the database before patient_id was added, run:
@@ -37,7 +41,11 @@ CREATE TABLE IF NOT EXISTS xray_images (
 -- ALTER TABLE patients ALTER COLUMN patient_id SET NOT NULL;
 -- CREATE UNIQUE INDEX IF NOT EXISTS patients_patient_id_unique_idx ON patients(patient_id);
 
--- If you already created the database before CS Imaging / DICOM support was added, run:
+-- If you already created the database before DICOM + Orthanc support was added, run:
 -- ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS viewer_kind VARCHAR(20) NOT NULL DEFAULT 'image';
 -- ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS mime_type VARCHAR(120);
+-- ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS orthanc_instance_id VARCHAR(80);
+-- ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS orthanc_study_id VARCHAR(80);
+-- ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS orthanc_study_uid VARCHAR(255);
+-- ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS orthanc_sync_error TEXT;
 -- UPDATE xray_images SET viewer_kind = 'image' WHERE viewer_kind IS NULL OR BTRIM(viewer_kind) = '';

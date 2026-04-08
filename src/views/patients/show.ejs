@@ -29,9 +29,18 @@
           <h2>Add X-ray File</h2>
         </div>
       </div>
+      <div class="integration-note <%= orthancEnabled ? 'ready' : 'warning' %>">
+        <% if (orthancEnabled) { %>
+          <strong>Orthanc/OHIF is enabled.</strong>
+          <span>Raw <code>.dcm</code> uploads will stay raw and will also be sent to the free Orthanc/OHIF viewer for higher quality browser viewing.</span>
+        <% } else { %>
+          <strong>Orthanc/OHIF is not enabled yet.</strong>
+          <span>Raw <code>.dcm</code> files will still be stored locally, but browser viewing will be limited until you start the free Orthanc/OHIF stack.</span>
+        <% } %>
+      </div>
       <p class="muted upload-help">
-        Best for browser viewing: export from CS Imaging as <strong>JPG</strong> or a single <strong>DICOM (.dcm)</strong> file.
-        You can also store a <strong>DICOMDIR</strong> or ZIP archive, but those are saved mainly for download instead of in-browser viewing.
+        Best for diagnosis-friendly web viewing: upload the original <strong>single DICOM (.dcm)</strong> export from CS Imaging.
+        JPG is still supported, but it is not the raw medical file.
       </p>
       <form method="POST" action="/patients/<%= patient.id %>/images" enctype="multipart/form-data" class="form-grid two-grid">
         <div class="full-span">
@@ -66,9 +75,20 @@
             <img src="<%= image.image_path %>" alt="<%= image.original_name %>" />
           <% } else if (image.viewer_kind === 'dicom') { %>
             <div class="dicom-placeholder">
-              <span class="dicom-badge">DICOM</span>
-              <strong>Browser viewer ready</strong>
-              <p>Open this file to display it directly on the website.</p>
+              <span class="dicom-badge">RAW DICOM</span>
+              <% if (image.orthanc_study_uid) { %>
+                <strong>OHIF viewer ready</strong>
+                <p>This raw DICOM was synced to Orthanc and can be opened in the medical viewer.</p>
+              <% } else { %>
+                <strong>Stored as raw DICOM</strong>
+                <p>
+                  <% if (image.orthanc_sync_error) { %>
+                    Orthanc sync failed for this upload. You can still download the raw file.
+                  <% } else { %>
+                    This file is preserved as raw DICOM. Configure Orthanc/OHIF to view it reliably in the browser.
+                  <% } %>
+                </p>
+              <% } %>
             </div>
           <% } else { %>
             <div class="file-placeholder">
@@ -83,10 +103,24 @@
               <span class="badge"><%= viewerKindLabel(image.viewer_kind) %></span>
             </div>
             <p><%= image.description || 'No description.' %></p>
+            <% if (image.viewer_kind === 'dicom') { %>
+              <p class="muted small image-status-line">
+                <% if (image.orthanc_study_uid) { %>
+                  <strong>Status:</strong> Synced to Orthanc/OHIF
+                <% } else if (image.orthanc_sync_error) { %>
+                  <strong>Status:</strong> Raw DICOM saved locally · Orthanc sync failed
+                <% } else { %>
+                  <strong>Status:</strong> Raw DICOM saved locally only
+                <% } %>
+              </p>
+            <% } %>
             <small>Uploaded by <%= image.uploader_name %> · <%= new Date(image.uploaded_at).toLocaleDateString() %></small>
             <div class="image-actions">
               <% if (isInlineViewable(image.viewer_kind)) { %>
                 <a href="/patients/<%= patient.id %>/images/<%= image.id %>" class="btn btn-primary btn-small">Open Viewer</a>
+              <% } %>
+              <% if (image.viewer_kind === 'dicom' && image.orthanc_study_uid) { %>
+                <a href="<%= getOrthancViewerUrlForStudy(image.orthanc_study_uid) %>" class="btn btn-outline btn-small" target="_blank" rel="noreferrer">Open OHIF</a>
               <% } %>
               <a href="<%= image.image_path %>" class="btn btn-outline btn-small" target="_blank" rel="noreferrer">Download / Open File</a>
             </div>

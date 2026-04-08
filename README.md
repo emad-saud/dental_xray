@@ -13,8 +13,9 @@ A simple dental clinic system built with **TypeScript**, **Node.js**, **Express*
 - Automatic default admin creation on first run
 - Support for:
   - regular images such as **JPG**, **JPEG**, **PNG**, **WEBP**, **TIFF**
-  - single **DICOM** files such as **.dcm** and **.dicom**
+  - raw **DICOM** files such as **.dcm** and **.dicom**
   - stored **ZIP / DICOMDIR** packages for download
+- Optional integration with **Orthanc + OHIF** for stronger DICOM web viewing
 
 ## Roles
 
@@ -36,13 +37,75 @@ A simple dental clinic system built with **TypeScript**, **Node.js**, **Express*
 - View patient data
 - View X-ray files in the browser
 
-## CS Imaging Note
+## DICOM strategy in this version
 
-CS Imaging can export images in ways that work well for the web app:
+This build keeps your workflow focused on **raw DICOM**:
 
-- Best for direct browser viewing: **JPG / JPEG**
-- Best medical format for the browser viewer: **single DICOM file (.dcm)**
-- If you export a **DICOMDIR** folder or a ZIP archive, the app stores it and lets staff download it, but direct browser rendering is not guaranteed because those packages often depend on many referenced files together.
+- the app stores the uploaded `.dcm` file **as raw `.dcm`**
+- it does **not** convert the file to JPG or PNG
+- if Orthanc/OHIF is enabled, the same raw DICOM is also sent to Orthanc for browser viewing
+- if Orthanc/OHIF is not enabled, the raw DICOM still stays in `uploads/` and can be downloaded/opened directly
+
+## Free tool or paid subscription?
+
+You do **not** need a paid subscription for the core viewer stack used here:
+
+- **Orthanc** is free and open-source medical imaging server software.
+- **OHIF Viewer** is open-source, web-based, and free to use.
+- Orthanc’s official OHIF plugin is available, and the `orthancteam/orthanc` Docker images include the plugin.
+
+## Why this is more reliable than the old viewer
+
+The older browser-only page tried to decode raw DICOM directly with a lightweight client-side loader. This version instead supports an Orthanc/OHIF path, which is much better suited for medical-image viewing. OHIF is designed as a web imaging platform and uses Cornerstone3D under the hood. Cornerstone3D documents support for many transfer syntaxes, including compressed formats such as JPEG 2000 and JPEG Lossless.
+
+## Orthanc/OHIF quick start
+
+This project includes `docker-compose.orthanc.yml` so you can start the free imaging stack quickly.
+
+### 1. Start Orthanc + OHIF
+
+```bash
+docker compose -f docker-compose.orthanc.yml up -d
+```
+
+That starts Orthanc on:
+
+- HTTP API / viewer host: `http://localhost:8042`
+- DICOM port: `4242`
+This compose file keeps Orthanc authentication off for easier local embedding in the app. Orthanc’s Docker images can enable plugins such as `DICOM_WEB_PLUGIN_ENABLED`, `OHIF_PLUGIN_ENABLED`, and `GDCM_PLUGIN_ENABLED` through environment variables.
+
+### 2. Enable Orthanc in the app `.env`
+
+```env
+ORTHANC_ENABLED=true
+ORTHANC_SERVER_URL=http://127.0.0.1:8042
+ORTHANC_PUBLIC_URL=http://127.0.0.1:8042
+ORTHANC_USERNAME=orthanc
+ORTHANC_PASSWORD=orthanc
+ORTHANC_OHIF_PATH=/ohif/viewer
+```
+
+### 3. Upload a raw `.dcm`
+
+When an X-ray employee uploads a single DICOM file:
+
+- the app saves it locally
+- the app POSTs the raw file to Orthanc using `/instances`
+- Orthanc returns the stored instance/study identifiers
+- the app links the image record to the OHIF viewer for that study
+
+Orthanc officially documents DICOM upload through `POST /instances`, and the response includes identifiers such as `ID` and `ParentStudy`.
+
+### 4. Open the patient image
+
+If the upload synced successfully, the image page will:
+
+- show the raw DICOM as stored
+- show an **Open in OHIF** button
+- try to embed OHIF directly in the page
+- keep a raw-file button as fallback
+
+OHIF supports opening studies by `StudyInstanceUIDs` through URL parameters such as `/viewer?StudyInstanceUIDs=...`.
 
 ## Default Admin
 
@@ -62,7 +125,7 @@ You can change that in `.env`.
 - EJS templates
 - Multer for uploads
 - express-session for basic authentication session handling
-- Cornerstone viewer libraries loaded in the browser for DICOM viewing
+- Optional Orthanc/OHIF integration for DICOM viewing
 
 ## Project Structure
 
@@ -80,6 +143,7 @@ public/
   css/
 uploads/
 database/
+docker-compose.orthanc.yml
 ```
 
 ## Setup
@@ -113,6 +177,12 @@ DEFAULT_ADMIN_NAME=System Admin
 DEFAULT_ADMIN_USERNAME=admin
 DEFAULT_ADMIN_PASSWORD=admin123
 PORT=3000
+ORTHANC_ENABLED=false
+ORTHANC_SERVER_URL=http://127.0.0.1:8042
+ORTHANC_PUBLIC_URL=http://127.0.0.1:8042
+ORTHANC_USERNAME=orthanc
+ORTHANC_PASSWORD=orthanc
+ORTHANC_OHIF_PATH=/ohif/viewer
 ```
 
 ### 4. Run the app
@@ -146,12 +216,24 @@ You can also run the SQL manually from:
 database/schema.sql
 ```
 
+## Migration notes for existing databases
+
+If you already created the database before this Orthanc update, run this once:
+
+```sql
+ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS orthanc_instance_id VARCHAR(80);
+ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS orthanc_study_id VARCHAR(80);
+ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS orthanc_study_uid VARCHAR(255);
+ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS orthanc_sync_error TEXT;
+```
+
 ## Notes
 
 - Uploaded files are stored locally in the `uploads/` folder.
 - Session storage is in-memory for simplicity. For production, use a persistent session store.
 - This is a simple starter project designed to be easy to understand and extend.
-- DICOM viewing works for single files. DICOMDIR packages are stored for download, not fully parsed as studies.
+- DICOMDIR packages are stored for download, not fully parsed as studies.
+- Orthanc’s official OHIF plugin can use the DICOM JSON data source or DICOMweb, and DICOMweb support in Orthanc is provided by the official DICOMweb plugin.
 
 ## Install notes
 
@@ -161,25 +243,4 @@ If `npm install` hangs, your npm may still be using a private or unreachable reg
 npm config delete registry
 npm config set registry https://registry.npmjs.org/
 npm install --registry=https://registry.npmjs.org/
-```
-
-## Patient ID
-
-Each patient has a required `Patient ID` field entered manually by the X-ray employee. This is intended to match an external clinic or imaging system reference. The internal database still keeps its own numeric primary key for routing and relations.
-
-If you already created the tables before this update, run this SQL once:
-
-```sql
-ALTER TABLE patients ADD COLUMN IF NOT EXISTS patient_id VARCHAR(60);
-UPDATE patients SET patient_id = CONCAT('P-', id) WHERE patient_id IS NULL OR BTRIM(patient_id) = '';
-ALTER TABLE patients ALTER COLUMN patient_id SET NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS patients_patient_id_unique_idx ON patients(patient_id);
-```
-
-If you already created the tables before the CS Imaging / DICOM update, also run:
-
-```sql
-ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS viewer_kind VARCHAR(20) NOT NULL DEFAULT 'image';
-ALTER TABLE xray_images ADD COLUMN IF NOT EXISTS mime_type VARCHAR(120);
-UPDATE xray_images SET viewer_kind = 'image' WHERE viewer_kind IS NULL OR BTRIM(viewer_kind) = '';
 ```

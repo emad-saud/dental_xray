@@ -61,7 +61,11 @@ async function initializeDatabase(): Promise<void> {
       uploaded_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       viewer_kind VARCHAR(20) NOT NULL DEFAULT 'image',
-      mime_type VARCHAR(120)
+      mime_type VARCHAR(120),
+      orthanc_instance_id VARCHAR(80),
+      orthanc_study_id VARCHAR(80),
+      orthanc_study_uid VARCHAR(255),
+      orthanc_sync_error TEXT
     );
   `);
 
@@ -73,6 +77,26 @@ async function initializeDatabase(): Promise<void> {
   await query(`
     ALTER TABLE xray_images
     ADD COLUMN IF NOT EXISTS mime_type VARCHAR(120);
+  `);
+
+  await query(`
+    ALTER TABLE xray_images
+    ADD COLUMN IF NOT EXISTS orthanc_instance_id VARCHAR(80);
+  `);
+
+  await query(`
+    ALTER TABLE xray_images
+    ADD COLUMN IF NOT EXISTS orthanc_study_id VARCHAR(80);
+  `);
+
+  await query(`
+    ALTER TABLE xray_images
+    ADD COLUMN IF NOT EXISTS orthanc_study_uid VARCHAR(255);
+  `);
+
+  await query(`
+    ALTER TABLE xray_images
+    ADD COLUMN IF NOT EXISTS orthanc_sync_error TEXT;
   `);
 
   await query(`

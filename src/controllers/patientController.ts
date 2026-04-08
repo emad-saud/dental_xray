@@ -1,3 +1,4 @@
+import path from 'path';
 import { Request, Response } from 'express';
 import {
   addImageToPatient,
@@ -8,6 +9,7 @@ import {
   getPatients
 } from '../models/patientModel';
 import { detectViewerKind, isInlineViewable, viewerKindLabel } from '../utils/fileTypes';
+import { getOrthancViewerUrlForStudy, isOrthancEnabled, uploadDicomToOrthanc } from '../utils/orthanc';
 
 export async function listPatients(req: Request, res: Response): Promise<void> {
   const searchTerm = typeof req.query.q === 'string' ? req.query.q.trim() : '';
@@ -74,7 +76,9 @@ export async function showPatientDetails(req: Request, res: Response): Promise<v
     patient,
     images,
     viewerKindLabel,
-    isInlineViewable
+    isInlineViewable,
+    orthancEnabled: isOrthancEnabled(),
+    getOrthancViewerUrlForStudy
   });
 }
 
@@ -99,6 +103,19 @@ export async function uploadPatientImage(req: Request, res: Response): Promise<v
     mimetype: req.file.mimetype
   });
 
+  let orthancInstanceId: string | null = null;
+  let orthancStudyId: string | null = null;
+  let orthancStudyUid: string | null = null;
+  let orthancSyncError: string | null = null;
+
+  if (viewerKind === 'dicom' && isOrthancEnabled()) {
+    const uploadResult = await uploadDicomToOrthanc(path.join(process.cwd(), 'uploads', req.file.filename));
+    orthancInstanceId = uploadResult.orthancInstanceId;
+    orthancStudyId = uploadResult.orthancStudyId;
+    orthancStudyUid = uploadResult.studyInstanceUid;
+    orthancSyncError = uploadResult.error;
+  }
+
   await addImageToPatient({
     patientId,
     imagePath: `/uploads/${req.file.filename}`,
@@ -106,13 +123,23 @@ export async function uploadPatientImage(req: Request, res: Response): Promise<v
     description: req.body.description ? String(req.body.description) : '',
     uploadedBy: req.session.user!.id,
     viewerKind,
-    mimeType: req.file.mimetype
+    mimeType: req.file.mimetype,
+    orthancInstanceId,
+    orthancStudyId,
+    orthancStudyUid,
+    orthancSyncError
   });
 
   if (viewerKind === 'dicom') {
-    req.session.notice = 'DICOM file uploaded successfully. Open it from the gallery to view it in the browser.';
+    if (orthancStudyUid) {
+      req.session.notice = 'Raw DICOM uploaded successfully and synced to Orthanc/OHIF for high-quality web viewing.';
+    } else if (isOrthancEnabled()) {
+      req.session.error = `Raw DICOM uploaded locally, but Orthanc/OHIF sync failed: ${orthancSyncError || 'Unknown error.'}`;
+    } else {
+      req.session.notice = 'Raw DICOM uploaded successfully. Enable Orthanc/OHIF for reliable browser viewing.';
+    }
   } else if (viewerKind === 'package') {
-    req.session.notice = 'Archive uploaded. DICOMDIR archives can be stored here, but for browser viewing export a single DICOM (.dcm) or JPG from CS Imaging.';
+    req.session.notice = 'Archive uploaded. DICOMDIR archives are stored for download; for browser viewing upload a single DICOM (.dcm) or JPG.';
   } else {
     req.session.notice = 'X-ray file uploaded successfully.';
   }
@@ -138,6 +165,8 @@ export async function showImageViewer(req: Request, res: Response): Promise<void
     patient,
     image,
     viewerKindLabel,
-    isInlineViewable
+    isInlineViewable,
+    orthancEnabled: isOrthancEnabled(),
+    orthancViewerUrl: getOrthancViewerUrlForStudy(image.orthanc_study_uid)
   });
 }

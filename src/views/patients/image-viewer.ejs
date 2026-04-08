@@ -36,94 +36,52 @@
     <section class="card viewer-card">
       <div class="viewer-toolbar">
         <div>
-          <strong>DICOM Web Viewer</strong>
-          <p class="muted small">Pan with drag. Use your mouse wheel to zoom if your browser supports it.</p>
+          <strong>Raw DICOM viewer</strong>
+          <p class="muted small">This page keeps the original <code>.dcm</code> file untouched and uses Orthanc/OHIF when available.</p>
         </div>
-        <button type="button" class="btn btn-outline btn-small" id="reset-view">Reset View</button>
       </div>
-      <div id="dicom-status" class="flash success viewer-status">Loading DICOM image...</div>
-      <div id="dicom-viewer" class="dicom-viewer" data-image-url="<%= image.image_path %>"></div>
+
+      <% if (orthancViewerUrl) { %>
+        <div class="integration-note ready">
+          <strong>Orthanc/OHIF ready.</strong>
+          <span>This DICOM is synced and should open in the embedded medical viewer below. If your browser blocks the embed, use the button to open OHIF in a new tab.</span>
+        </div>
+        <div class="hero-actions viewer-link-row">
+          <a href="<%= orthancViewerUrl %>" class="btn btn-primary" target="_blank" rel="noreferrer">Open in OHIF</a>
+          <a href="<%= image.image_path %>" class="btn btn-outline" target="_blank" rel="noreferrer">Download Raw DICOM</a>
+        </div>
+        <div class="ohif-frame-wrap">
+          <iframe src="<%= orthancViewerUrl %>" title="OHIF medical viewer" class="ohif-frame"></iframe>
+        </div>
+      <% } else { %>
+        <div class="integration-note warning">
+          <strong>Orthanc/OHIF is not ready for this file.</strong>
+          <span>
+            <% if (image.orthanc_sync_error) { %>
+              Sync error: <%= image.orthanc_sync_error %>
+            <% } else if (orthancEnabled) { %>
+              This file is raw DICOM, but it has not been linked to an Orthanc study yet.
+            <% } else { %>
+              Start the free Orthanc/OHIF stack to view raw DICOM reliably in the browser.
+            <% } %>
+          </span>
+        </div>
+        <section class="card empty-state viewer-fallback-card">
+          <h2>Raw DICOM stored successfully</h2>
+          <p class="muted">
+            The app preserved the original <code>.dcm</code> file. Open or download the raw file now, or enable Orthanc/OHIF for a stronger browser viewer.
+          </p>
+          <div class="hero-actions viewer-link-row center-row">
+            <a href="<%= image.image_path %>" class="btn btn-primary" target="_blank" rel="noreferrer">Open Raw File</a>
+          </div>
+        </section>
+      <% } %>
     </section>
-
-    <script src="https://cdn.jsdelivr.net/npm/cornerstone-core@2.6.1/dist/cornerstone.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dicom-parser@1.8.21/dist/dicomParser.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cornerstone-math@0.1.10/dist/cornerstoneMath.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cornerstone-tools@4.22.1/dist/cornerstoneTools.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cornerstone-wado-image-loader@4.13.2/dist/cornerstoneWADOImageLoaderNoWebWorkers.bundle.min.js"></script>
-    <script>
-      (function () {
-        const element = document.getElementById('dicom-viewer');
-        const status = document.getElementById('dicom-status');
-        const resetButton = document.getElementById('reset-view');
-        const fileUrl = element.getAttribute('data-image-url');
-
-        function setStatus(message, isError) {
-          status.textContent = message;
-          status.className = 'flash ' + (isError ? 'error' : 'success') + ' viewer-status';
-        }
-
-        try {
-          if (!window.cornerstone) {
-            throw new Error('cornerstone-core failed to load');
-          }
-          if (!window.dicomParser) {
-            throw new Error('dicom-parser failed to load');
-          }
-          if (!window.cornerstoneWADOImageLoader) {
-            throw new Error('cornerstone-wado-image-loader failed to load');
-          }
-          if (!window.cornerstoneTools) {
-            throw new Error('cornerstone-tools failed to load');
-          }
-          if (!window.Hammer) {
-            throw new Error('hammerjs failed to load');
-          }
-          if (!window.cornerstoneMath) {
-            throw new Error('cornerstone-math failed to load');
-          }
-
-          cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
-          cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
-          cornerstoneTools.external.cornerstone = cornerstone;
-          cornerstoneTools.external.Hammer = Hammer;
-          cornerstoneTools.external.cornerstoneMath = cornerstoneMath;
-          cornerstoneTools.init();
-
-          cornerstone.enable(element);
-          const imageId = 'wadouri:' + window.location.origin + fileUrl;
-
-          cornerstone
-            .loadAndCacheImage(imageId)
-            .then(function (image) {
-              cornerstone.displayImage(element, image);
-              cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
-              cornerstoneTools.addTool(cornerstoneTools.PanTool);
-              cornerstoneTools.addTool(cornerstoneTools.ZoomWheelTool);
-              cornerstoneTools.setToolActive('Wwwc', { mouseButtonMask: 1 });
-              cornerstoneTools.setToolActive('Pan', { mouseButtonMask: 4 });
-              cornerstoneTools.setToolActive('ZoomWheel', {});
-              setStatus('DICOM image loaded successfully.', false);
-            })
-            .catch(function (error) {
-              console.error(error);
-              setStatus('Could not render this DICOM in the browser. Try opening the raw file, or export the image as JPG from CS Imaging.', true);
-            });
-
-          resetButton.addEventListener('click', function () {
-            cornerstone.reset(element);
-          });
-        } catch (error) {
-          console.error(error);
-          setStatus('The browser DICOM viewer could not start. One of its JavaScript libraries did not load correctly.', true);
-        }
-      })();
-    </script>
   <% } else { %>
     <section class="card empty-state">
       <h2>This file is stored, but not rendered inline.</h2>
       <p class="muted">
-        DICOMDIR folders and archives usually need the referenced files together. For direct web viewing, export a single DICOM (.dcm) or JPG from CS Imaging.
+        DICOMDIR folders and archives usually need the referenced files together. For direct web viewing, upload a single DICOM (.dcm) or JPG from CS Imaging.
       </p>
       <a href="<%= image.image_path %>" class="btn btn-primary" target="_blank" rel="noreferrer">Download File</a>
     </section>

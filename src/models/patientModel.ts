@@ -25,6 +25,10 @@ export interface XrayImageRecord {
   uploader_name?: string;
   viewer_kind: ViewerKind;
   mime_type: string | null;
+  orthanc_instance_id: string | null;
+  orthanc_study_id: string | null;
+  orthanc_study_uid: string | null;
+  orthanc_sync_error: string | null;
 }
 
 export async function createPatient(data: {
@@ -126,10 +130,26 @@ export async function addImageToPatient(data: {
   uploadedBy: number;
   viewerKind: ViewerKind;
   mimeType?: string;
+  orthancInstanceId?: string | null;
+  orthancStudyId?: string | null;
+  orthancStudyUid?: string | null;
+  orthancSyncError?: string | null;
 }): Promise<void> {
   await query(
-    `INSERT INTO xray_images (patient_id, image_path, original_name, description, uploaded_by, viewer_kind, mime_type)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    `INSERT INTO xray_images (
+      patient_id,
+      image_path,
+      original_name,
+      description,
+      uploaded_by,
+      viewer_kind,
+      mime_type,
+      orthanc_instance_id,
+      orthanc_study_id,
+      orthanc_study_uid,
+      orthanc_sync_error
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       data.patientId,
       data.imagePath,
@@ -137,7 +157,11 @@ export async function addImageToPatient(data: {
       data.description || null,
       data.uploadedBy,
       data.viewerKind,
-      data.mimeType || null
+      data.mimeType || null,
+      data.orthancInstanceId || null,
+      data.orthancStudyId || null,
+      data.orthancStudyUid || null,
+      data.orthancSyncError || null
     ]
   );
 }

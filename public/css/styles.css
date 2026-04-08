@@ -478,3 +478,52 @@ code {
   object-fit: contain;
   margin: 0 auto;
 }
+
+
+.integration-note {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+}
+
+.integration-note.ready {
+  background: #eef8ff;
+}
+
+.integration-note.warning {
+  background: #fff8e7;
+  border-color: #f1dfad;
+}
+
+.image-status-line {
+  margin-top: 8px;
+}
+
+.viewer-link-row {
+  margin: 0 0 16px;
+}
+
+.ohif-frame-wrap {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #f7fbff;
+}
+
+.ohif-frame {
+  width: 100%;
+  min-height: 82vh;
+  border: 0;
+  background: #ffffff;
+}
+
+.viewer-fallback-card {
+  margin-top: 16px;
+}
+
+.center-row {
+  justify-content: center;
+}
