@@ -50,7 +50,7 @@
     <script src="https://cdn.jsdelivr.net/npm/cornerstone-math@0.1.10/dist/cornerstoneMath.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cornerstone-tools@4.22.1/dist/cornerstoneTools.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cornerstone-wado-image-loader@4.13.2/dist/cornerstoneWADOImageLoader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cornerstone-wado-image-loader@4.13.2/dist/cornerstoneWADOImageLoaderNoWebWorkers.bundle.min.js"></script>
     <script>
       (function () {
         const element = document.getElementById('dicom-viewer');
@@ -58,52 +58,65 @@
         const resetButton = document.getElementById('reset-view');
         const fileUrl = element.getAttribute('data-image-url');
 
-        cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
-        cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
-        cornerstoneTools.external.cornerstone = cornerstone;
-        cornerstoneTools.external.Hammer = Hammer;
-        cornerstoneTools.external.cornerstoneMath = cornerstoneMath;
-        cornerstoneTools.init();
-
-        cornerstoneWADOImageLoader.webWorkerManager.initialize({
-          webWorkerPath:
-            'https://cdn.jsdelivr.net/npm/cornerstone-wado-image-loader@4.13.2/dist/cornerstoneWADOImageLoaderWebWorker.min.js',
-          taskConfiguration: {
-            decodeTask: {
-              codecsPath:
-                'https://cdn.jsdelivr.net/npm/cornerstone-wado-image-loader@4.13.2/dist/cornerstoneWADOImageLoaderCodecs.min.js'
-            }
-          }
-        });
-
-        cornerstone.enable(element);
-        const imageId = 'wadouri:' + window.location.origin + fileUrl;
-
         function setStatus(message, isError) {
           status.textContent = message;
           status.className = 'flash ' + (isError ? 'error' : 'success') + ' viewer-status';
         }
 
-        cornerstone
-          .loadAndCacheImage(imageId)
-          .then(function (image) {
-            cornerstone.displayImage(element, image);
-            cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
-            cornerstoneTools.addTool(cornerstoneTools.PanTool);
-            cornerstoneTools.addTool(cornerstoneTools.ZoomWheelTool);
-            cornerstoneTools.setToolActive('Wwwc', { mouseButtonMask: 1 });
-            cornerstoneTools.setToolActive('Pan', { mouseButtonMask: 4 });
-            cornerstoneTools.setToolActive('ZoomWheel', {});
-            setStatus('DICOM image loaded successfully.', false);
-          })
-          .catch(function (error) {
-            console.error(error);
-            setStatus('Could not render this DICOM in the browser. Try opening the raw file, or export the image as JPG from CS Imaging.', true);
-          });
+        try {
+          if (!window.cornerstone) {
+            throw new Error('cornerstone-core failed to load');
+          }
+          if (!window.dicomParser) {
+            throw new Error('dicom-parser failed to load');
+          }
+          if (!window.cornerstoneWADOImageLoader) {
+            throw new Error('cornerstone-wado-image-loader failed to load');
+          }
+          if (!window.cornerstoneTools) {
+            throw new Error('cornerstone-tools failed to load');
+          }
+          if (!window.Hammer) {
+            throw new Error('hammerjs failed to load');
+          }
+          if (!window.cornerstoneMath) {
+            throw new Error('cornerstone-math failed to load');
+          }
 
-        resetButton.addEventListener('click', function () {
-          cornerstone.reset(element);
-        });
+          cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
+          cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
+          cornerstoneTools.external.cornerstone = cornerstone;
+          cornerstoneTools.external.Hammer = Hammer;
+          cornerstoneTools.external.cornerstoneMath = cornerstoneMath;
+          cornerstoneTools.init();
+
+          cornerstone.enable(element);
+          const imageId = 'wadouri:' + window.location.origin + fileUrl;
+
+          cornerstone
+            .loadAndCacheImage(imageId)
+            .then(function (image) {
+              cornerstone.displayImage(element, image);
+              cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
+              cornerstoneTools.addTool(cornerstoneTools.PanTool);
+              cornerstoneTools.addTool(cornerstoneTools.ZoomWheelTool);
+              cornerstoneTools.setToolActive('Wwwc', { mouseButtonMask: 1 });
+              cornerstoneTools.setToolActive('Pan', { mouseButtonMask: 4 });
+              cornerstoneTools.setToolActive('ZoomWheel', {});
+              setStatus('DICOM image loaded successfully.', false);
+            })
+            .catch(function (error) {
+              console.error(error);
+              setStatus('Could not render this DICOM in the browser. Try opening the raw file, or export the image as JPG from CS Imaging.', true);
+            });
+
+          resetButton.addEventListener('click', function () {
+            cornerstone.reset(element);
+          });
+        } catch (error) {
+          console.error(error);
+          setStatus('The browser DICOM viewer could not start. One of its JavaScript libraries did not load correctly.', true);
+        }
       })();
     </script>
   <% } else { %>
